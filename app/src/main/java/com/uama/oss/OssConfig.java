@@ -22,29 +22,6 @@ public class OssConfig {
     public static int MaxUploadNumber=9; // 最大并发请求数，默认9个;最大并发图片请求数；
     public static int MaxErrorRetry=2; // 失败后最大重试次数，默认2次
 
-    static String OssBucketName = "huilaila-pub"; //https://help.aliyun.com/document_detail/31837.html?spm=a2c4g.11186623.2.10.68352d71hgc9Y9#concept-zt4-cvy-5db
+    static String OssBucketName = "uama";
 
-   public static void setOssSts(String oss){
-        if(!TextUtils.isEmpty(oss)) OssStsServer=oss;
-   }
-
-   public static String getOssStsServer(){
-       return OssStsServer;
-   }
-
-    /**
-     * 此处创建一个文件上传缓存类
-     * isSuccess：表示上传结果
-     * netUrl:表示上传路径
-     * @note 如果在app启动过程中，上传文件在oss后台被删除，app依旧会记录为已上传，此时会出现上传错误路径的情况
-     */
-   public static class UploadResult{
-       private boolean isSuccess;
-       private String netUrl;
-
-       public UploadResult(boolean isSuccess,String netUrl){
-           this.isSuccess = isSuccess;
-           this.netUrl = netUrl;
-       }
-   }
 }

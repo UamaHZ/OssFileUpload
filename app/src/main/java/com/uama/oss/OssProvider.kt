@@ -1,15 +1,18 @@
 package com.uama.oss
 
 import android.app.Application
+import android.text.TextUtils
 import com.alibaba.sdk.android.oss.ClientConfiguration
 import com.alibaba.sdk.android.oss.OSS
 import com.alibaba.sdk.android.oss.OSSClient
 import com.alibaba.sdk.android.oss.common.auth.OSSCredentialProvider
+import com.alibaba.sdk.android.oss.model.OSSBucketSummary
 
 class OssProvider:IOssProvider{
     companion object {
         var mApplication: Application? =null
         var mOssCredentialProvider:OSSCredentialProvider?=null
+        var OssBucketName:String?=null
         /**
          * OssProvider是单例的：建议于application 初始化时调用
          */
@@ -33,11 +36,15 @@ class OssProvider:IOssProvider{
             }
         };
      */
-    fun init(ossCredentialProvider: OSSCredentialProvider,application:Application){
+    fun init(ossBucketName:String,ossCredentialProvider: OSSCredentialProvider,application:Application){
+        OssBucketName = ossBucketName
         mOssCredentialProvider = ossCredentialProvider
         mApplication = application
     }
     override fun providerOss(): OSS {
+        if(TextUtils.isEmpty(OssBucketName)){
+            throw NullPointerException("you need initialize OssBucketName")
+        }
         if(mApplication == null){
             throw IllegalStateException("you need initialize application")
         }

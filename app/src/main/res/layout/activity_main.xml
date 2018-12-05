@@ -4,15 +4,59 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="#fff"
     tools:context=".MainActivity">
 
     <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Hello World!"
-        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_width="200dp"
+        android:layout_height="100dp"
+        android:gravity="center"
+        android:background="@android:color/holo_blue_light"
+        android:id="@+id/tx_search"
+        android:text="选择文件"
+        android:textColor="@android:color/white"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        android:layout_marginTop="100dp"/>
 
+    <TextView
+        android:layout_width="0dp"
+        android:layout_height="100dp"
+        android:gravity="center"
+        android:background="@android:color/holo_red_dark"
+        android:text="文件名"
+        android:textColor="@android:color/white"
+        android:id="@+id/tx_fileName"
+        android:layout_margin="20dp"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tx_search" />
+
+
+    <TextView
+        android:layout_width="100dp"
+        android:layout_height="60dp"
+        android:gravity="center"
+        android:background="@android:color/holo_green_light"
+        android:text="提交"
+        android:textColor="@android:color/white"
+        android:id="@+id/tx_submit"
+        android:layout_margin="20dp"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tx_fileName" />
+
+    <TextView
+        android:layout_width="0dp"
+        android:layout_height="60dp"
+        android:gravity="center"
+        android:background="@android:color/holo_green_light"
+        android:text="结果"
+        android:textColor="@android:color/white"
+        android:id="@+id/tx_result"
+        android:layout_margin="20dp"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tx_submit" />
 </android.support.constraint.ConstraintLayout>

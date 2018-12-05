@@ -23,4 +23,6 @@ enum class UploadResultEnum(code:Int){
  * 此处加一个id索引列表 idSet
  */
 data class UploadResult(var filePath:String,var code:UploadResultEnum = UploadResultEnum.DEFAULT,var serveFilePath:String="",
-                        val idSet:MutableSet<String> = mutableSetOf())
+                        val idSet:MutableSet<String> = mutableSetOf(),var uploadType:String="")
+
+fun UploadResult.getMapKey():String = uploadType+filePath
