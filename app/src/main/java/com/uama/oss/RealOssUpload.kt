@@ -121,6 +121,8 @@ class RealOssUpload : IOssUpload {
         }
     }
 
+    private  val iOssUploadPath = RealOssUploadPath()
+
     //单个上传接口
     override fun upLoad(uploadType: String, filePaths: List<String>, uploadListener: UploadListener, isStrongCheck: Boolean) {
         cancel = false
@@ -158,12 +160,11 @@ class RealOssUpload : IOssUpload {
             uploadListener.onError("filePaths is empty,are you sure?")
             return
         }
-        val iOssUploadPath = RealOssUploadPath()
         //id用来区分该上传队列
         val id = Math.round(100f).toString() + "-" + System.currentTimeMillis().toString()
         //创建数据实体映射，真实上传数据（文件路径，文件夹，服务器文件相对应路径，上传结果）
         val fileRealList = filePaths.map { UploadResult(it,
-                serveFilePath=iOssUploadPath.getOssUploadPath(uploadType, File(it)),idSet = mutableSetOf(id),uploadType = uploadType) }.toMutableList()
+                serveFilePath=getCacheOrCreatePath(uploadType, it),idSet = mutableSetOf(id),uploadType = uploadType) }.toMutableList()
         //此处，过滤掉本地已经上传成功的文件
         val unUploadPathList = fileRealList
                 .filter { uploadResultCache[it.getMapKey()]?.code != UploadResultEnum.SUCCESS }
@@ -202,6 +203,13 @@ class RealOssUpload : IOssUpload {
         }else{
             //缓存中已经上传成功了，此时直接回调给前台上传成功即可
             uploadListener.onSuccess(fileRealList.map { it.serveFilePath }.toMutableList())
+        }
+    }
+
+    private fun getCacheOrCreatePath(uploadType: String, filePath:String):String{
+        return when(uploadResultCache[uploadType+filePath]?.code==null){
+            true->iOssUploadPath.getOssUploadPath(uploadType, File(filePath))
+            false->uploadResultCache[uploadType+filePath]!!.serveFilePath
         }
     }
 
