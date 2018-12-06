@@ -5,9 +5,11 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.os.Bundle
 import android.text.TextUtils
+import android.util.Log
 import android.widget.Toast
 import com.alibaba.sdk.android.oss.common.auth.OSSCustomSignerCredentialProvider
 import com.alibaba.sdk.android.oss.common.utils.OSSUtils
+import com.uama.oss.RealOssUpload.Companion.TAG
 import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : Activity() {
@@ -41,7 +43,10 @@ class MainActivity : Activity() {
             }
 
             override fun onSuccess(mutableList: MutableList<String>) {
-                tx_result.text = mutableList.joinToString ("\n")
+                val a =  mutableList.joinToString ("\n")
+                Log.i(TAG,"result-->$a")
+                tx_result.text = a
+                Log.i(TAG,"tx_result.text -->"+tx_result.text )
             }
         })
     }

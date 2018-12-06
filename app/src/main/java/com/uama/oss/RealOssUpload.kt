@@ -44,18 +44,30 @@ class RealOssUpload : IOssUpload {
                 whitUploadQueue.removeAll(needUpload)
             }
             //如果上传中的池子为空时，不需要执行looper不断获取上传结果来了
-            Log.i(TAG,"queue length"+uploadQueue.size)
+//            Log.i(TAG,"queue length"+uploadQueue.size)
             return uploadQueue.isNotEmpty()
         }
 
         val uploadHandler = UploadHandler()
-        private var ossAsyncTasks: MutableList<OSSAsyncTask<*>> =  mutableListOf()
-        private fun getLooperThread(): Thread = Thread("Looper")
+        var ossAsyncTasks: MutableList<OSSAsyncTask<*>> =  mutableListOf()
+        fun getLooperThread(): Thread = object :Thread("OssLooperThread"){
+            override fun run() {
+                while (!cancel) {
+                    if(!(containsWhitUpload()||uploadMessageQueue.isNotEmpty())){
+                        sleep(2000)
+                        Log.i(TAG,"sleep -- begin"+System.currentTimeMillis())
+                    }
+//                    Log.i(TAG,"uploadMessageQueue"+uploadMessageQueue.size)
+                    loopQueue()
+                }
+            }
+        }
         val whitUploadQueue: MutableList<UploadResult> = mutableListOf()//待上传的图片队列
         val uploadQueue: ArrayList<UploadResult> = ArrayList(OssConfig.MaxUploadNumber) //正在上传的图片队列
 
         //这个是消息池；可以不断往这个池子中添加消息 当消息满足某个条件时，会将消息打包发送给handler
         val uploadMessageQueue: MutableList<UploadResult> = mutableListOf()
+
         val uploadGroupMap: MutableMap<String, UploadGroupInfo> = mutableMapOf()
         var uploadResultCache: MutableMap<String, UploadResult> = HashMap() //用于缓存文件上传结果，避免上传重复文件；现简单根据文件名判断；后可追加文件md5判断
 
@@ -64,17 +76,13 @@ class RealOssUpload : IOssUpload {
          * @cancel 用户选择手动结束图片上传，此时也不在looper了
          */
         fun startLooper() {
-            getLooperThread().run {
-                while (containsWhitUpload()||uploadMessageQueue.isNotEmpty()&&!cancel) {
-                    Log.i(TAG,"uploadMessageQueue"+uploadMessageQueue.size)
-                   loopQueue()
-                }
-            }
+            getLooperThread().start()
         }
 
         private fun loopQueue() {
             //不断读取queue中的消息，处理->将这个结果加入缓存图片列表；遍历uploadGroupMap相关消息，是否能够满足完全队列情况，满足发送消息出去
             if (uploadMessageQueue.isEmpty()) return
+            Log.i(TAG,"uploadMessageQueue"+uploadMessageQueue.size+uploadMessageQueue[0].serveFilePath)
             val uploadResult = uploadMessageQueue[0]
             uploadResult.idSet.forEach { it ->
                 //如果缓存中某个item处理完毕，此时我们发送对应的事件通知他，可以结束了
@@ -91,6 +99,8 @@ class RealOssUpload : IOssUpload {
                     uploadGroupMap.remove(it)
                 }
             }
+            //此处移除队列中的消息
+            uploadMessageQueue.removeAt(0)
         }
 
         private fun realUpload(uploadResult: UploadResult){
