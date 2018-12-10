@@ -10,7 +10,7 @@ import com.alibaba.sdk.android.oss.common.auth.OSSCredentialProvider
 class OssProvider:IOssProvider{
     companion object {
         var mApplication: Application? =null
-        var mOssCredentialProvider:OSSCredentialProvider?=null
+        var mOssCredentialProvider: OSSCredentialProvider?=null
         var OssBucketName:String?=null
         var OssEndPoint:String?=null
 
