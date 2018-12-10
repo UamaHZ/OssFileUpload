@@ -6,13 +6,14 @@ import com.alibaba.sdk.android.oss.ClientConfiguration
 import com.alibaba.sdk.android.oss.OSS
 import com.alibaba.sdk.android.oss.OSSClient
 import com.alibaba.sdk.android.oss.common.auth.OSSCredentialProvider
-import com.alibaba.sdk.android.oss.model.OSSBucketSummary
 
 class OssProvider:IOssProvider{
     companion object {
         var mApplication: Application? =null
         var mOssCredentialProvider:OSSCredentialProvider?=null
         var OssBucketName:String?=null
+        var OssEndPoint:String?=null
+
         /**
          * OssProvider是单例的：建议于application 初始化时调用
          */
@@ -36,11 +37,15 @@ class OssProvider:IOssProvider{
             }
         };
      */
-    fun init(ossBucketName:String,ossCredentialProvider: OSSCredentialProvider,application:Application){
+    fun init(ossBucketName:String,ossCredentialProvider: OSSCredentialProvider,application:Application,ossEndPoint:String? = OssConfig.DefaultOssEndPoint){
         OssBucketName = ossBucketName
         mOssCredentialProvider = ossCredentialProvider
         mApplication = application
+        if(!TextUtils.isEmpty(ossEndPoint)){
+            OssEndPoint = ossEndPoint
+        }
     }
+
     override fun providerOss(): OSS {
         if(TextUtils.isEmpty(OssBucketName)){
             throw NullPointerException("you need initialize OssBucketName")
@@ -56,7 +61,7 @@ class OssProvider:IOssProvider{
                 conf.socketTimeout = OssConfig.OssSocketTime // socket超时，默认15秒
                 conf.maxConcurrentRequest = OssConfig.MaxUploadNumber // 最大并发请求数，默认5个
                 conf.maxErrorRetry = OssConfig.MaxErrorRetry // 失败后最大重试次数，默认2次
-                return OSSClient(mApplication, OssConfig.OssEndPoint, mOssCredentialProvider)
+                return OSSClient(mApplication, OssEndPoint, mOssCredentialProvider)
             }
         }
     }

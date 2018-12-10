@@ -1,7 +1,6 @@
 package com.uama.oss
 
 import android.text.TextUtils
-import android.util.Log
 import com.alibaba.sdk.android.oss.ClientException
 import com.alibaba.sdk.android.oss.ServiceException
 import com.alibaba.sdk.android.oss.callback.OSSCompletedCallback
@@ -27,6 +26,15 @@ class RealOssUpload : IOssUpload {
             val realOnUploadData = uploadQueue.filter { it.code != UploadResultEnum.DEFAULT }.toMutableList()
             //判断是否可以继续往该队列塞数据，size>0可以塞
             val canInSize =OssConfig.MaxUploadNumber - realOnUploadData.size
+            //此处对
+            val deRepeat=whitUploadQueue.distinctBy { it.getMapKey() }
+                    .filterNot{it-> uploadQueue.any {upload->upload.getMapKey()==it.getMapKey() } }
+            OssLog.i(TAG,"deRepeat length"+deRepeat.size)
+            OssLog.i(TAG,"whitUploadQueue length"+whitUploadQueue.size)
+            if(whitUploadQueue.size!=deRepeat.size){
+                whitUploadQueue.clear()
+                whitUploadQueue.addAll(deRepeat)
+            }
             if(canInSize>0){
                 //此处 待上传数据池，获取可以添加至正在上传的数据集合
                val needUpload=when(whitUploadQueue.size>=canInSize){
@@ -55,7 +63,7 @@ class RealOssUpload : IOssUpload {
                 while (!cancel) {
                     if(!(containsWhitUpload()||uploadMessageQueue.isNotEmpty())){
                         sleep(2000)
-                        Log.i(TAG,"sleep -- begin"+System.currentTimeMillis())
+                        OssLog.i(TAG,"sleep -- begin"+System.currentTimeMillis())
                     }
 //                    Log.i(TAG,"uploadMessageQueue"+uploadMessageQueue.size)
                     loopQueue()
@@ -82,17 +90,23 @@ class RealOssUpload : IOssUpload {
         private fun loopQueue() {
             //不断读取queue中的消息，处理->将这个结果加入缓存图片列表；遍历uploadGroupMap相关消息，是否能够满足完全队列情况，满足发送消息出去
             if (uploadMessageQueue.isEmpty()) return
-            Log.i(TAG,"uploadMessageQueue"+uploadMessageQueue.size+uploadMessageQueue[0].serveFilePath)
+            OssLog.i(TAG,"uploadMessageQueue"+uploadMessageQueue.size+uploadMessageQueue[0].getMapKey())
             val uploadResult = uploadMessageQueue[0]
             uploadResult.idSet.forEach { it ->
-                //如果缓存中某个item处理完毕，此时我们发送对应的事件通知他，可以结束了
+                //如果缓存中某个item处理完毕，此时我们发送对应的事件通知他，可以结束了;同时将服务器地址从缓存中取出来，放在组队列中
                 if (uploadGroupMap[it]?.isDealOver() == true) {
+                    //缓存的上传任务中，清除改任务合集
+                    removeCompleteTask()
                     //handler接收queue发送的消息
                     uploadHandler.handlerResult(uploadGroupMap[it]!!)
                     //上传结果为false时，此时肯定存在某些数据是上传失败，uploadResultCache移除掉这些失败的数据
                     if(uploadGroupMap[it]?.isSuccess()!=true){
-                        val uploadData = uploadGroupMap[it]?.filePaths
-                        val unSuccessData = uploadResultCache.filter { map-> uploadData?.contains(map.value.serveFilePath)?:false}
+                        //转换成对应的key
+                        val uploadData = uploadGroupMap[it]?.keyMapList
+                        //找到此次上传的缓存队列，再找到非成功数据
+                        val unSuccessData = uploadResultCache.filter { map-> uploadData?.contains(map.value.getMapKey())?:false}
+                                .filter {  it.value.code != UploadResultEnum.SUCCESS}
+                        //移除缓存
                         unSuccessData.forEach{  uploadResultCache.remove(it.key)}
                     }
                     //待办的列表中移除该item，表示结果已传递
@@ -102,13 +116,15 @@ class RealOssUpload : IOssUpload {
             //此处移除队列中的消息
             uploadMessageQueue.removeAt(0)
         }
-
+        private  val iOssUploadPath = RealOssUploadPath()
+        private fun UploadResult.getServePath():String = iOssUploadPath.getOssUploadPath(uploadType,File(filePath))
         private fun realUpload(uploadResult: UploadResult){
-            val put = PutObjectRequest(OssConfig.OssBucketName, uploadResult.serveFilePath, uploadResult.filePath)
+            val put = PutObjectRequest(OssProvider.OssBucketName, uploadResult.getServePath(), uploadResult.filePath)
             val ossAsyncTask = OssProvider.getInstance().providerOss().asyncPutObject(put, object : OSSCompletedCallback<PutObjectRequest, PutObjectResult> {
                 override fun onSuccess(request: PutObjectRequest, result: PutObjectResult) {
-                    Log.i(TAG,"上传成功"+request.uploadFilePath)
+                    OssLog.i(TAG,"上传成功"+request.uploadFilePath)
                     uploadResult.code = UploadResultEnum.SUCCESS
+                    uploadResult.servicePath = request.objectKey
                     uploadHandler.postUploadResult(uploadResult)
                     uploadResultCache[uploadResult.getMapKey()] = uploadResult
                 }
@@ -120,18 +136,20 @@ class RealOssUpload : IOssUpload {
                     uploadHandler.postUploadResult(uploadResult)
                     if (serviceException != null) {
                         // 服务异常
-                        Log.e("ErrorCode", serviceException.errorCode)
-                        Log.e("RequestId", serviceException.requestId)
-                        Log.e("HostId", serviceException.hostId)
-                        Log.e("RawMessage", serviceException.rawMessage)
+                        OssLog.e("ErrorCode", serviceException.errorCode)
+                        OssLog.e("RequestId", serviceException.requestId)
+                        OssLog.e("HostId", serviceException.hostId)
+                        OssLog.e("RawMessage", serviceException.rawMessage)
                     }
                 }
             })
             ossAsyncTasks.add(ossAsyncTask)
         }
-    }
 
-    private  val iOssUploadPath = RealOssUploadPath()
+        private fun removeCompleteTask(){
+            ossAsyncTasks.removeAll(ossAsyncTasks.filter { it.isCompleted||it.isCanceled })
+        }
+    }
 
     //单个上传接口
     override fun upLoad(uploadType: String, filePaths: List<String>, uploadListener: UploadListener, isStrongCheck: Boolean) {
@@ -145,7 +163,7 @@ class RealOssUpload : IOssUpload {
                     !verifyFilePath(it)
                 }) {
                     true -> {
-                        Log.w(TAG, "the strongCheck is open and the $unLegalStr is illegal")
+                        OssLog.w(TAG, "the strongCheck is open and the $unLegalStr is illegal")
                         uploadListener.onError("the strongCheck is open and the $unLegalStr is illegal")
                         return
                     }
@@ -172,21 +190,20 @@ class RealOssUpload : IOssUpload {
         }
         //id用来区分该上传队列
         val id = Math.round(100f).toString() + "-" + System.currentTimeMillis().toString()
-        //创建数据实体映射，真实上传数据（文件路径，文件夹，服务器文件相对应路径，上传结果）
-        val fileRealList = filePaths.map { UploadResult(it,
-                serveFilePath=getCacheOrCreatePath(uploadType, it),idSet = mutableSetOf(id),uploadType = uploadType) }.toMutableList()
+        //创建数据实体映射，真实上传数据（文件路径，文件夹，上传结果）,服务器路径统一在上传结束获取
+        val fileRealList = filePaths.map { UploadResult(it, idSet = mutableSetOf(id),uploadType = uploadType) }.toMutableList()
         //此处，过滤掉本地已经上传成功的文件
         val unUploadPathList = fileRealList
                 .filter { uploadResultCache[it.getMapKey()]?.code != UploadResultEnum.SUCCESS }
         //存在待上传文件（缓存的上传成功文件不包含所有uploadType+filePaths数据）
         if (unUploadPathList.isNotEmpty()) {
-            val uploadGroupInfo = UploadGroupInfo(fileRealList.map { it.serveFilePath }.toMutableList(), uploadListener)
+            val uploadGroupInfo = UploadGroupInfo(keyMapList = fileRealList.map { it.getMapKey() }.toMutableList(),uploadListener= uploadListener)
             uploadGroupMap[id] = uploadGroupInfo
 
             //文件上传简单池数据入池，如果有数据位于上传中的池子，则将id放入改池子中的匹配数据，并将此数据移除
-            val filterOnLoadData = unUploadPathList.filter { it ->
-                !uploadQueue.any { upload ->
-                    if (upload.serveFilePath == it.serveFilePath) {
+            val filterOnLoadData = unUploadPathList.filterNot { it ->
+                uploadQueue.any { upload ->
+                    if (upload.getMapKey() == it.getMapKey()) {
                         upload.idSet.add(id)
                         true
                     } else false
@@ -194,16 +211,17 @@ class RealOssUpload : IOssUpload {
             }
 
             //待上传数据池，数据过滤合并
-            val endData = filterOnLoadData.filter {
-                !whitUploadQueue.any { whitUpload ->
-                    if (whitUpload.serveFilePath == it.serveFilePath) {
+            val endData = filterOnLoadData.filterNot {
+                whitUploadQueue.any { whitUpload ->
+                    if (whitUpload.getMapKey() == it.getMapKey()) {
                         whitUpload.idSet.add(id)
                         true
                     } else false
                 }
             }
+            whitUploadQueue.addAll(endData.distinctBy { it.getMapKey() })
+            fileRealList.map { it.getMapKey() }
 
-            whitUploadQueue.addAll(endData)
             //判断线程状态，没启动的情况下，启动该looper
             when (getLooperThread().state) {
                 Thread.State.RUNNABLE -> {
@@ -212,16 +230,16 @@ class RealOssUpload : IOssUpload {
             }
         }else{
             //缓存中已经上传成功了，此时直接回调给前台上传成功即可
-            uploadListener.onSuccess(fileRealList.map { it.serveFilePath }.toMutableList())
+            uploadListener.onSuccess(fileRealList.map { uploadResultCache[uploadType+it.filePath]?.servicePath?:""}.toMutableList())
         }
     }
 
-    private fun getCacheOrCreatePath(uploadType: String, filePath:String):String{
-        return when(uploadResultCache[uploadType+filePath]?.code==null){
-            true->iOssUploadPath.getOssUploadPath(uploadType, File(filePath))
-            false->uploadResultCache[uploadType+filePath]!!.serveFilePath
-        }
-    }
+//    private fun getCacheOrCreatePath(uploadType: String, filePath:String):String{
+//        return when(uploadResultCache[uploadType+filePath]?.code==null){
+//            true->iOssUploadPath.getOssUploadPath(uploadType, File(filePath))
+//            false->uploadResultCache[uploadType+filePath]?.serveFilePath?:""
+//        }
+//    }
 
     /**
      * 根据路径校验文件是否合法，真实存在
@@ -243,7 +261,17 @@ class RealOssUpload : IOssUpload {
 
     override fun cancelUpload() {
         cancel = true
+        //首先关闭正在上传的所有任务栈
         ossAsyncTasks.forEach { if(!it.isCanceled)it.cancel() }
+        ossAsyncTasks.clear()
+        //用户手动取消时：待上传队列，上传队列全部清空；
+        if(cancel){
+            whitUploadQueue.clear()
+            uploadQueue.clear()
+            uploadMessageQueue.clear()
+            uploadGroupMap.forEach { it.value.uploadListener.onError("is canceled by user") }
+            uploadGroupMap.clear()
+        }
     }
 
 }
@@ -251,15 +279,19 @@ class RealOssUpload : IOssUpload {
 /**
  * 每次上传将其拼接起来
  */
-data class UploadGroupInfo(var filePaths: MutableList<String>, var uploadListener: UploadListener,var isHandler: Boolean = false)
+data class UploadGroupInfo(var keyMapList: MutableList<String> = mutableListOf(),var filePaths: MutableList<String> = mutableListOf(),
+                           var uploadListener: UploadListener,var isHandler: Boolean = false)
 
 fun UploadGroupInfo.isDealOver(): Boolean {
-    return !filePaths.any {
-        return when (uploadResultCache[it] == null) {
-            true -> true
-            false -> uploadResultCache[it]?.code == UploadResultEnum.DEFAULT
+    filePaths.clear()
+    keyMapList.forEach {
+        if(uploadResultCache[it] == null||uploadResultCache[it]?.code == UploadResultEnum.DEFAULT){
+            return false
+        }else{
+            filePaths.add(uploadResultCache[it]!!.servicePath)
         }
     }
+    return true
 }
 
 fun UploadGroupInfo.isSuccess(): Boolean {

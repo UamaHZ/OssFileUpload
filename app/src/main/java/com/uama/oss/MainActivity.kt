@@ -5,7 +5,7 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.os.Bundle
 import android.text.TextUtils
-import android.util.Log
+import android.widget.TextView
 import android.widget.Toast
 import com.alibaba.sdk.android.oss.common.auth.OSSCustomSignerCredentialProvider
 import com.alibaba.sdk.android.oss.common.utils.OSSUtils
@@ -13,6 +13,8 @@ import com.uama.oss.RealOssUpload.Companion.TAG
 import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : Activity() {
+    private val code_1 = 1001
+    private val code_2= 1002
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -23,30 +25,37 @@ class MainActivity : Activity() {
                 return OSSUtils.sign("LTAIAubF6GXRgmHC","Ki094wdAUcmAW9QZ7jpLQxBi8DrKbP",content)
             }
         }
-        OssProvider.getInstance().init(OssConfig.OssBucketName,credentialProvider,application)
-        tx_search.setOnClickListener {
-            selectFile()
+        OssProvider.getInstance().init("uama",credentialProvider,application)
+        tx_search_1.setOnClickListener {
+            selectFile(code_1)
+        }
+        tx_search_2.setOnClickListener {
+            selectFile(code_2)
         }
         tx_submit.setOnClickListener {
-            uploadFile()
+            uploadFile(tx_result_1,pathList1)
         }
-
+        tx_submit_2.setOnClickListener {
+//            uploadFile(tx_result_2,pathList2)
+            upload.cancelUpload()
+        }
     }
 
-    lateinit var upload:IOssUpload
-    private val pathList:MutableList<String> = mutableListOf()
-    private fun uploadFile(){
+    private lateinit var upload:IOssUpload
+    private val pathList1:MutableList<String> = mutableListOf()
+    private val pathList2:MutableList<String> = mutableListOf()
+    private fun uploadFile(tx:TextView,pathList:MutableList<String>){
         upload=RealOssUpload()
         upload.upLoad("user", pathList,object : UploadListener{
             override fun onError(msg: String) {
-                tx_result.text = msg
+                tx.text = msg
             }
 
             override fun onSuccess(mutableList: MutableList<String>) {
                 val a =  mutableList.joinToString ("\n")
-                Log.i(TAG,"result-->$a")
-                tx_result.text = a
-                Log.i(TAG,"tx_result.text -->"+tx_result.text )
+                OssLog.i(TAG,"result-->$a")
+                tx.text = a
+                OssLog.i(TAG,"tx_result.text -->"+tx.text )
             }
         })
     }
@@ -54,12 +63,12 @@ class MainActivity : Activity() {
     /**
      * 通过手机选择文件
      */
-    private fun selectFile() {
+    private fun selectFile(code:Int) {
         val intent = Intent(Intent.ACTION_GET_CONTENT)
         intent.type = ("*/*")
         intent.addCategory(Intent.CATEGORY_OPENABLE)
         try {
-            startActivityForResult(Intent.createChooser(intent, "选择文件上传"), 345)
+            startActivityForResult(Intent.createChooser(intent, "选择文件上传"), code)
         } catch (no: ActivityNotFoundException) {
             Toast.makeText(this,"请安装一个文件管理器.",Toast.LENGTH_SHORT).show()
         }
@@ -67,11 +76,17 @@ class MainActivity : Activity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (resultCode == Activity.RESULT_OK && data != null && requestCode == 345) {
+        if (resultCode == Activity.RESULT_OK && data != null && requestCode == code_1) {
             if (data.data == null) return
             val path = ContentUtil.getPath(this, data.data)
-            pathList.add(path)
-            tx_fileName.text = pathList.joinToString("\n") {it.getFileName()}
+            pathList1.add(path)
+            tx_search_1.text = pathList1.joinToString("\n") {it.getFileName()}
+        }
+        if (resultCode == Activity.RESULT_OK && data != null && requestCode == code_2) {
+            if (data.data == null) return
+            val path = ContentUtil.getPath(this, data.data)
+            pathList2.add(path)
+            tx_search_2.text = pathList2.joinToString("\n") {it.getFileName()}
         }
     }
 

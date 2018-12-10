@@ -22,7 +22,7 @@ enum class UploadResultEnum(code:Int){
  * 可以参考Message，每次发送消息都是发送这个
  * 此处加一个id索引列表 idSet
  */
-data class UploadResult(var filePath:String,var code:UploadResultEnum = UploadResultEnum.DEFAULT,var serveFilePath:String="",
-                        val idSet:MutableSet<String> = mutableSetOf(),var uploadType:String="")
+data class UploadResult(var filePath:String,var code:UploadResultEnum = UploadResultEnum.DEFAULT,
+                        val idSet:MutableSet<String> = mutableSetOf(),var uploadType:String="",var servicePath:String = "")
 
 fun UploadResult.getMapKey():String = uploadType+filePath

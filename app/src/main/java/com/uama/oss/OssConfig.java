@@ -1,11 +1,5 @@
 package com.uama.oss;
 
-import android.text.TextUtils;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 /**
  * Created by guozhen.hou on 2018/7/23.
  * oss服务器配置信息
@@ -14,14 +8,10 @@ import java.util.Map;
  */
 
 public class OssConfig {
-    public static String OssEndPoint="http://oss-cn-hangzhou.aliyuncs.com";//oss地域地址
+    public static String DefaultOssEndPoint="http://oss-cn-hangzhou.aliyuncs.com";//oss地域地址
 
-    private static String OssStsServer = "";//sts服务器，安全性比较高
     public static int OssConnectTime=15 * 1000;// 连接超时，默认15秒
     public static int OssSocketTime=15 * 1000; // socket超时，默认15秒
     public static int MaxUploadNumber=9; // 最大并发请求数，默认9个;最大并发图片请求数；
     public static int MaxErrorRetry=2; // 失败后最大重试次数，默认2次
-
-    static String OssBucketName = "uama";
-
 }
