@@ -53,9 +53,9 @@ class MainActivity : Activity() {
 
             override fun onSuccess(mutableList: MutableList<String>) {
                 val a =  mutableList.joinToString ("\n")
-                OssLog.i(TAG,"result-->$a")
+                OssUploadLog.i(TAG,"result-->$a")
                 tx.text = a
-                OssLog.i(TAG,"tx_result.text -->"+tx.text )
+                OssUploadLog.i(TAG,"tx_result.text -->"+tx.text )
             }
         })
     }

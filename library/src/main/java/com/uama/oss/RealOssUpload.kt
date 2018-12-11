@@ -29,8 +29,8 @@ class RealOssUpload : IOssUpload {
             //此处对
             val deRepeat=whitUploadQueue.distinctBy { it.getMapKey() }
                     .filterNot{it-> uploadQueue.any {upload->upload.getMapKey()==it.getMapKey() } }
-            OssLog.i(TAG,"deRepeat length"+deRepeat.size)
-            OssLog.i(TAG,"whitUploadQueue length"+whitUploadQueue.size)
+            OssUploadLog.i(TAG,"deRepeat length"+deRepeat.size)
+            OssUploadLog.i(TAG,"whitUploadQueue length"+whitUploadQueue.size)
             if(whitUploadQueue.size!=deRepeat.size){
                 whitUploadQueue.clear()
                 whitUploadQueue.addAll(deRepeat)
@@ -63,7 +63,7 @@ class RealOssUpload : IOssUpload {
                 while (!cancel) {
                     if(!(containsWhitUpload()||uploadMessageQueue.isNotEmpty())){
                         sleep(2000)
-                        OssLog.i(TAG,"sleep -- begin"+System.currentTimeMillis())
+                        OssUploadLog.i(TAG,"sleep -- begin"+System.currentTimeMillis())
                     }
 //                    Log.i(TAG,"uploadMessageQueue"+uploadMessageQueue.size)
                     loopQueue()
@@ -90,7 +90,7 @@ class RealOssUpload : IOssUpload {
         private fun loopQueue() {
             //不断读取queue中的消息，处理->将这个结果加入缓存图片列表；遍历uploadGroupMap相关消息，是否能够满足完全队列情况，满足发送消息出去
             if (uploadMessageQueue.isEmpty()) return
-            OssLog.i(TAG,"uploadMessageQueue"+uploadMessageQueue.size+uploadMessageQueue[0].getMapKey())
+            OssUploadLog.i(TAG,"uploadMessageQueue"+uploadMessageQueue.size+uploadMessageQueue[0].getMapKey())
             val uploadResult = uploadMessageQueue[0]
             uploadResult.idSet.forEach { it ->
                 //如果缓存中某个item处理完毕，此时我们发送对应的事件通知他，可以结束了;同时将服务器地址从缓存中取出来，放在组队列中
@@ -122,7 +122,7 @@ class RealOssUpload : IOssUpload {
             val put = PutObjectRequest(OssProvider.OssBucketName, uploadResult.getServePath(), uploadResult.filePath)
             val ossAsyncTask = OssProvider.getInstance().providerOss().asyncPutObject(put, object : OSSCompletedCallback<PutObjectRequest, PutObjectResult> {
                 override fun onSuccess(request: PutObjectRequest, result: PutObjectResult) {
-                    OssLog.i(TAG,"上传成功"+request.uploadFilePath)
+                    OssUploadLog.i(TAG,"上传成功"+request.uploadFilePath)
                     uploadResult.code = UploadResultEnum.SUCCESS
                     uploadResult.servicePath = request.objectKey
                     uploadHandler.postUploadResult(uploadResult)
@@ -136,10 +136,10 @@ class RealOssUpload : IOssUpload {
                     uploadHandler.postUploadResult(uploadResult)
                     if (serviceException != null) {
                         // 服务异常
-                        OssLog.e("ErrorCode", serviceException.errorCode)
-                        OssLog.e("RequestId", serviceException.requestId)
-                        OssLog.e("HostId", serviceException.hostId)
-                        OssLog.e("RawMessage", serviceException.rawMessage)
+                        OssUploadLog.e("ErrorCode", serviceException.errorCode)
+                        OssUploadLog.e("RequestId", serviceException.requestId)
+                        OssUploadLog.e("HostId", serviceException.hostId)
+                        OssUploadLog.e("RawMessage", serviceException.rawMessage)
                     }
                 }
             })
@@ -163,7 +163,7 @@ class RealOssUpload : IOssUpload {
                     !verifyFilePath(it)
                 }) {
                     true -> {
-                        OssLog.w(TAG, "the strongCheck is open and the $unLegalStr is illegal")
+                        OssUploadLog.w(TAG, "the strongCheck is open and the $unLegalStr is illegal")
                         uploadListener.onError("the strongCheck is open and the $unLegalStr is illegal")
                         return
                     }

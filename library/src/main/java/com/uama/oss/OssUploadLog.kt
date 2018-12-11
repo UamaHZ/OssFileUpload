@@ -1,10 +1,11 @@
 package com.uama.oss
 
 import android.util.Log
+import com.alibaba.sdk.android.oss.common.OSSLog
 
-class OssLog{
+class OssUploadLog{
     companion object {
-        var isOpen = true
+        private var isOpen = false
         fun i(tag:String,info:String){
             if(isOpen)Log.i(tag,info)
         }
@@ -13,6 +14,11 @@ class OssLog{
         }
         fun w(tag:String,warnings:String){
             if(isOpen)Log.i(tag,warnings)
+        }
+
+        fun enableLog(){
+            isOpen = true
+            OSSLog.enableLog()
         }
     }
 
