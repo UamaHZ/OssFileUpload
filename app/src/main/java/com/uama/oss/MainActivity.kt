@@ -25,6 +25,7 @@ class MainActivity : Activity() {
                 return OSSUtils.sign("LTAIAubF6GXRgmHC","Ki094wdAUcmAW9QZ7jpLQxBi8DrKbP",content)
             }
         }
+
         OssProvider.getInstance().init("uama",credentialProvider,application)
         tx_search_1.setOnClickListener {
             selectFile(code_1)

@@ -37,7 +37,14 @@ class OssProvider:IOssProvider{
             }
         };
      */
-    fun init(ossBucketName:String,ossCredentialProvider: OSSCredentialProvider,application:Application,ossEndPoint:String? = OssConfig.DefaultOssEndPoint){
+    fun init(ossBucketName:String,ossCredentialProvider: OSSCredentialProvider,application:Application){
+        OssBucketName = ossBucketName
+        mOssCredentialProvider = ossCredentialProvider
+        mApplication = application
+        OssEndPoint = OssConfig.DefaultOssEndPoint
+    }
+
+    fun init(ossBucketName:String,ossCredentialProvider: OSSCredentialProvider,application:Application,ossEndPoint:String = OssConfig.DefaultOssEndPoint){
         OssBucketName = ossBucketName
         mOssCredentialProvider = ossCredentialProvider
         mApplication = application
